@@ -23,3 +23,5 @@ Example of the generated point clouds ca be see here, where multiple image sizes
 The conversion between depth images, point clouds and geometry images can be seen here:
 
 ![plot](./depth2pcd2gim_fake.png)
+
+The main file types besides geometry images, are point clouds, RGB images and depth images captured by Pico Zense cameras and ADI Smart Cameras (Courtesy of Analog Devices).
