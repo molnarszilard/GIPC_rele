@@ -15,3 +15,7 @@ Set up the path to it.
 Run main.py to train
 
 To test it, run testing.py file. 
+
+Example of the generated point clouds ca be see here, where multiple image sizes were comparised
+
+![Alt text](chair_890_test_32_64_128_comparison_labels.pngraw=true "Point clouds compared")
