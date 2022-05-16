@@ -19,3 +19,7 @@ To test it, run testing.py file.
 Example of the generated point clouds ca be see here, where multiple image sizes were comparised
 
 ![plot](./chair_890_test_32_64_128_comparison_labels.png)
+
+The conversion between depth images, point clouds and geometry images can be seen here:
+
+![plot](./depth2pcd2gim_fake.png)
