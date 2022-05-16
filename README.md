@@ -1,14 +1,17 @@
-GIPC_rele
+Representation Learning for point clouds using geometry images
 
-mkdir data
+This repo contains the code for training the VAE based geometry image generator method, including hyperparameter tuning with RayTune.
 
-mkdir results
+Inside the folder create 'data' and 'results' folders.
+
+In hyperparam.ini you can configure the parameters.
+
+To use ray_tune, install the package, and set up the parameters in the main.py file.
 
 Download the ModelNet dataset, convert it to gim images
 You can use https://github.com/sinhayan/learning_geometry_images with matlab to do it.
+Set up the path to it.
 
 Run main.py to train
-In hyperparam.ini you can configure the parameters.
-To use ray_tune, install the package, and set up the parameters in the main.py file.
 
 To test it, run testing.py file. 
