@@ -17,7 +17,7 @@ import torch
 from torch.utils.data import Dataset, DataLoader, random_split
 import cv2
 import open3d as o3d
-
+import timeit
 from disvae import init_specific_model, Trainer, Evaluator
 from disvae.utils.modelIO import save_model, load_model, load_metadata
 from disvae.models.losses import LOSSES, RECON_DIST, get_loss_f
@@ -54,7 +54,7 @@ def parse_arguments(args_to_parse):
 
     # General options
     general = parser.add_argument_group('General options')
-    general.add_argument('name', type=str,
+    general.add_argument('--name', type=str,
                          help="Name of the model for storing and loading purposes.")
     general.add_argument('-L', '--log-level', help="Logging levels.",
                          default=default_config['log_level'], choices=LOG_LEVELS)
@@ -68,6 +68,8 @@ def parse_arguments(args_to_parse):
                          help='Random seed. Can be `None` for stochastic behavior.')
     general.add_argument('--ray', type=bool, default=default_config['ray'],
                          help='Do you want to tune your hyperparameters using ray tune?')
+    general.add_argument('--noise', type=str, default='none'
+                         help="Do you want to add noise to the input data? Options: none, gauss, dszero, dscopy")
 
     # Learning options
     training = parser.add_argument_group('Training specific options')
@@ -219,6 +221,27 @@ def save_reco(data,images, directory, height):
         path = os.path.join(directory, "gim_test_{}_gt.pcd".format(i)) 
         o3d.io.write_point_cloud(path,pcd)
 
+def addnoise(gim):
+    noise = (np.random.normal(0, 2, size=gim.shape)).astype(np.float32)/255
+    return gim + noise
+
+def downsample(gim):
+    for i in range(gim.shape[2]):
+        for j in range(gim.shape[3]):
+            if (i+j)%2:
+                gim[:,:,i,j]=0
+    return gim
+
+def downsample_fill(gim):
+    for i in range(gim.shape[2]):
+        for j in range(gim.shape[3]):
+            if (i+j)%2:
+                if i%2 and j==0:
+                    gim[:,:,i,j]=gim[:,:,i-1,gim.shape[3]-1]
+                else:
+                    gim[:,:,i,j]=gim[:,:,i,j-1]
+    return gim
+
 def train(config=None, args=None):
     # if args.loss == "factor":
     #         logger.info("FactorVae needs 2 batches per iteration. To replicate this behavior while being consistent, we double the batch size and the the number of epochs.")
@@ -246,17 +269,9 @@ def train(config=None, args=None):
         batch_size=bs,
         shuffle=True,
         num_workers=8)
-    # logger.info("Train {} with {} samples".format(args.dataset, len(train_loader)))
 
     # PREPARES MODEL 
     model.to(device)     
-    # if args.start_checkpoint > -1:
-    #     model_state, optimizer_state = torch.load(
-    #         os.path.join(args.checkpoint_dir, "checkpoint"))
-    #     model.load_state_dict(model_state)
-    #     optimizer.load_state_dict(optimizer_state)
-        
-    # logger.info('Num parameters in model: {}'.format(get_n_param(model)))
 
     # TRAINS
     lr = args.lr
@@ -276,8 +291,14 @@ def train(config=None, args=None):
         kwargs = dict(desc="Epoch {}".format(epoch), leave=False,
                     disable=args.no_progress_bar)
         with trange(len(train_loader), **kwargs) as t:
-            # for _, (data, _) in enumerate(data_loader):
             for _, data in enumerate(train_loader):
+                if not args.noise=='none':
+                    if args.noise=='gauss':
+                        data = addnoise(data)
+                    if args.noise=='dszero':
+                        data = downsample(data)
+                    if args.noise=='dscopy':
+                        data = downsample_fill(data)
                 data = data.to(device)
                 try:
                     recon_batch, latent_dist, latent_sample = model(data)
@@ -288,7 +309,6 @@ def train(config=None, args=None):
                     optimizer.step()
 
                 except ValueError:
-                    # for losses that use multiple optimizers (e.g. Factor)
                     loss,rec_loss, kl_loss, loss_cd = loss_f.call_optimize(data, model, optimizer, storer)
 
                 iter_loss = loss.item()
@@ -298,9 +318,6 @@ def train(config=None, args=None):
                 t.update()
 
         mean_epoch_loss = epoch_loss / len(train_loader)
-        # mean_epoch_loss = self._train_epoch(data_loader, storer, epoch)
-        # logger.info('Epoch: {} Average loss per image: {:.2f}'.format(epoch + 1,mean_epoch_loss))
-        # losses_logger.log(epoch, storer)
         model.eval()
         val_loss = 0.0
         val_loss_rec = 0.0
@@ -331,11 +348,9 @@ def train(config=None, args=None):
                     val_loss_cd += loss_cd.cpu().numpy()
                     val_steps += 1
                 except ValueError:
-                    # for losses that use multiple optimizers (e.g. Factor)
                     loss,rec_loss, kl_loss, loss_cd = loss_f.call_optimize(data, model, optimizer, storer)
         
         if epoch % args.checkpoint_every == 0 or epoch == args.epochs-1:
-            # save_model(model, exp_dir,filename="model-{}.pt".format(epoch), epoch=epoch, tune=tune)
             if args.ray:
                 with tune.checkpoint_dir(epoch) as directory:
                     path_to_model = os.path.join(directory, "checkpoint")
@@ -363,14 +378,6 @@ def test(args, model,device,logger=None, config=None):
                         n_data=len(test_loader),
                         device=device,
                         **vars(args))
-    # evaluator = Evaluator(model, loss_f,
-    #                         device=device,
-    #                         logger=logger,
-    #                         is_progress_bar=not args.no_progress_bar)
-
-    # metric,losses = evaluator(test_loader, is_metrics=args.is_metrics, is_losses=not args.no_test)
-
-
     nr = 0
     start = default_timer()
     model.eval()
@@ -407,24 +414,18 @@ def main(args):
     stream.setLevel(args.log_level.upper())
     stream.setFormatter(formatter)
     logger.addHandler(stream)
-
     set_seed(args.seed)
-    # device = get_device(is_gpu=not args.no_cuda)
     exp_dir = os.path.join(args.checkpoint_dir, args.name)
     logger.info("Root directory for saving and loading experiments: {}".format(exp_dir))
     device = "cpu"
     if torch.cuda.is_available() and not args.no_cuda:
         device = "cuda:0"
-        # if torch.cuda.device_count() > 1:
-        #     model = nn.DataParallel(model)
     args.img_size = (3,args.image_size,args.image_size)
     create_safe_directory(exp_dir, logger=logger)
     if args.ray:
         config = {
-            # 'batch_size': tune.choice([2, 4, 8, 16,128]),
             'betaB_finC': tune.grid_search([1,10,50,100,150,200,300,400,500,1000]),
             'betaB_G': tune.grid_search([1,10,50,100,150,1000]),
-            # 'lr': tune.loguniform(1e-4, 1e-3)
             'lr': tune.grid_search([1e-4,5e-4,1e-3]),
         }
         gpus_per_trial = 2
@@ -436,7 +437,6 @@ def main(args):
             grace_period=1,
             reduction_factor=2)
         reporter = CLIReporter(
-            # parameter_columns=["l1", "l2", "lr", "batch_size"],
             metric_columns=["loss","rec_loss", "kl_loss","loss_cd","training_iteration"])
         result = tune.run(
             partial(train,args=args),
@@ -446,7 +446,6 @@ def main(args):
             num_samples=num_samples,
             scheduler=None,
             progress_reporter=reporter,
-            # checkpoint_at_end=True
             )       
         best_trial = result.get_best_trial("loss_cd", "min", "last")
         print("Best trial config: {}".format(best_trial.config))

@@ -9,7 +9,7 @@ import torch
 from torch.utils.data import Dataset, DataLoader, random_split
 import cv2
 import open3d as o3d
-
+import timeit
 from disvae import init_specific_model
 from disvae.models.losses import LOSSES, RECON_DIST
 from disvae.models.vae import MODELS
@@ -55,6 +55,8 @@ def parse_arguments(args_to_parse):
                          help='Disables CUDA training, even when have one.')
     general.add_argument('-s', '--seed', type=int, default=default_config['seed'],
                          help='Random seed. Can be `None` for stochastic behavior.')
+    general.add_argument('--noise', type=str, default='none'
+                         help="Do you want to add noise to the input data? Options: none, gauss, dszero, dscopy")
 
     # Learning options
     training = parser.add_argument_group('Training specific options')
@@ -194,7 +196,6 @@ def save_reco(data,images, directory, height):
         gim2flat = np.reshape(gimnp,(height*height,3))
         pcd = o3d.geometry.PointCloud()
         pcd.points = o3d.utility.Vector3dVector(gim2flat)
-        # pcd = pcd.uniform_down_sample(2)
         path = os.path.join(directory, "gim_test_{}.pcd".format(i)) 
         o3d.io.write_point_cloud(path,pcd)
 
@@ -202,9 +203,29 @@ def save_reco(data,images, directory, height):
         gim2flat = np.reshape(gimnp,(height*height,3))
         pcd = o3d.geometry.PointCloud()
         pcd.points = o3d.utility.Vector3dVector(gim2flat)
-        # pcd = pcd.uniform_down_sample(2)
         path = os.path.join(directory, "gim_test_{}_gt.pcd".format(i)) 
         o3d.io.write_point_cloud(path,pcd)
+
+def addnoise(gim):
+    noise = (np.random.normal(0, 2, size=gim.shape)).astype(np.float32)/255
+    return gim + noise
+
+def downsample(gim):
+    for i in range(gim.shape[2]):
+        for j in range(gim.shape[3]):
+            if (i+j)%2:
+                gim[:,:,i,j]=0
+    return gim
+
+def downsample_fill(gim):
+    for i in range(gim.shape[2]):
+        for j in range(gim.shape[3]):
+            if (i+j)%2:
+                if i%2 and j==0:
+                    gim[:,:,i,j]=gim[:,:,i-1,gim.shape[3]-1]
+                else:
+                    gim[:,:,i,j]=gim[:,:,i,j-1]
+    return gim
 
 def test(args, model,device,logger=None, config=None):
     print("Evaluation")
@@ -215,6 +236,13 @@ def test(args, model,device,logger=None, config=None):
     model.eval()
     for i, data in enumerate(test_loader, 0):
         nr +=1
+        if not args.noise=='none':
+            if args.noise=='gauss':
+                data = addnoise(data)
+            if args.noise=='dszero':
+                data = downsample(data)
+            if args.noise=='dscopy':
+                data = downsample_fill(data)
         data = data.to(device)
         recon_batch, latent_dist, latent_sample = model(data)
         if i==0:
@@ -243,23 +271,17 @@ def main(args):
     logger.addHandler(stream)
 
     set_seed(args.seed)
-    # device = get_device(is_gpu=not args.no_cuda)
     exp_dir = os.path.join(RES_DIR, args.name)
     logger.info("Root directory for saving and loading experiments: {}".format(exp_dir))
     device = "cpu"
     if torch.cuda.is_available() and not args.no_cuda:
         device = "cuda:0"
-        # if torch.cuda.device_count() > 1:
-        #     model = nn.DataParallel(model)
     args.img_size = (3,args.image_size,args.image_size)
 
     model = init_specific_model(args.model_type, args.img_size, args.latent_dim)
-    # Net(best_trial.config["l1"], best_trial.config["l2"])
     device = "cpu"
     if torch.cuda.is_available():
         device = "cuda:0"
-        # if gpus_per_trial > 1:
-        #     best_trained_model = nn.DataParallel(best_trained_model)
     
     model_state = torch.load(os.path.join(
         args.checkpoint_dir, "checkpoint"))

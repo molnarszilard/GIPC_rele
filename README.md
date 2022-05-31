@@ -4,9 +4,8 @@ This repo contains the code for training the VAE based geometry image generator 
 
 Inside the folder create 'data' and 'results' folders.
 
-In hyperparam.ini you can configure the parameters.
-
-To use ray_tune, install the package, and set up the parameters in the main.py file.
+Set up the parameters in the main.py file, and in the hyperparam.ini.
+Set 'ray' to True, and modify the parameters in the main.py file: (find the line starting with 'if args.ray:')
 
 ##DATASET
 
@@ -28,3 +27,12 @@ The conversion between depth images, point clouds and geometry images can be see
 The main file types besides geometry images, are point clouds, RGB images and depth images captured by Pico Zense cameras and ADI Smart Cameras (Courtesy of Analog Devices).
 
 We compared our method to https://github.com/MaciejZamorski/3d-AAE method. Our method performs about 80% of this method concerning Chamfer Distance, but our method is approximately 1.3-1.5 times faster in generating new images.
+
+A small table about the results can be seen as the following (at downsampling we copied every second value to the next position, in order to keep the size constant):
+
+| Noise type  | Our | 3d-AAE |
+| ------------- | ------------- | ------------- |
+| none  | 10.89 | 8.99 |
+| Gaussian  | 10.22 | 7.2007 |
+| Downsampling | 13.3611 | 10.2439 |
+| Average time | 0.022 ms | 0.03 ms |
