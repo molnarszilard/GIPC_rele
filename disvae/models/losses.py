@@ -220,7 +220,7 @@ class BetaBLoss(BaseLoss):
         #         f'(KL: {kl_loss.item(): .4f}) '
         #         f'(RL: {rec_loss.item(): .4f}) '
         #         )
-        loss = rec_loss + self.gamma * (kl_loss - C).abs() + loss_cd
+        loss = rec_loss + self.gamma * (kl_loss - C).abs() + loss_cd*10
 
         if storer is not None:
             storer['loss'].append(loss.item())
@@ -499,6 +499,10 @@ class ChamferLoss(nn.Module):
     def batch_pairwise_dist(self, x, y):
         bs, num_points_x, points_dim = x.size()
         _, num_points_y, _ = y.size()
+        x = x-x.min()
+        x = x/x.max()-0.5
+        y = y-y.min()
+        y = y/y.max()-0.5
         xx = torch.bmm(x, x.transpose(2, 1))
         yy = torch.bmm(y, y.transpose(2, 1))
         zz = torch.bmm(x, y.transpose(2, 1))

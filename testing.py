@@ -173,26 +173,21 @@ def parse_arguments(args_to_parse):
 
     return args
 
-def save_reco(data,images, directory, height):
+def save_reco(data,data_n,images, directory, height):
     images=images*255
     data=data*255
+    data_n=data_n*255
     length = 10
     if len(images)<10:
         length = len(images)
     for i in range(length):
+        #save reco
         image = images[i].detach().cpu().numpy().astype(np.uint8)
         while len(image.shape)>3:
             image=image.squeeze(axis=0)
         image = np.moveaxis(image,0,-1)
         path = os.path.join(directory, "gim_test_{}.png".format(i))
         cv2.imwrite(path,image)
-
-        gt = data[i].detach().cpu().numpy().astype(np.uint8)
-        while len(gt.shape)>3:
-            gt=gt.squeeze(axis=0)
-        gt = np.moveaxis(gt,0,-1)
-        path = os.path.join(directory, "gim_test_{}_gt.png".format(i))
-        cv2.imwrite(path,gt)
 
         gimnp=np.array(image/255.0)
         gim2flat = np.reshape(gimnp,(height*height,3))
@@ -201,6 +196,14 @@ def save_reco(data,images, directory, height):
         path = os.path.join(directory, "gim_test_{}.pcd".format(i)) 
         o3d.io.write_point_cloud(path,pcd)
 
+        #save gt
+        gt = data[i].detach().cpu().numpy().astype(np.uint8)
+        while len(gt.shape)>3:
+            gt=gt.squeeze(axis=0)
+        gt = np.moveaxis(gt,0,-1)
+        path = os.path.join(directory, "gim_test_{}_gt.png".format(i))
+        cv2.imwrite(path,gt)
+
         gimnp=np.array(gt/255.0)
         gim2flat = np.reshape(gimnp,(height*height,3))
         pcd = o3d.geometry.PointCloud()
@@ -208,9 +211,25 @@ def save_reco(data,images, directory, height):
         path = os.path.join(directory, "gim_test_{}_gt.pcd".format(i)) 
         o3d.io.write_point_cloud(path,pcd)
 
+        #save noisy gt
+        gt_noise = data_n[i].detach().cpu().numpy().astype(np.uint8)
+        while len(gt_noise.shape)>3:
+            gt_noise=gt_noise.squeeze(axis=0)
+        gt_noise = np.moveaxis(gt_noise,0,-1)
+        path = os.path.join(directory, "gim_test_{}_gt_noise.png".format(i))
+        cv2.imwrite(path,gt_noise)
+
+        gimnp=np.array(gt_noise/255.0)
+        gim2flat = np.reshape(gimnp,(height*height,3))
+        pcd = o3d.geometry.PointCloud()
+        pcd.points = o3d.utility.Vector3dVector(gim2flat)
+        path = os.path.join(directory, "gim_test_{}_gt_noise.pcd".format(i)) 
+        o3d.io.write_point_cloud(path,pcd)
+
 def addnoise(gim):
-    noise = (np.random.normal(0, 2, size=gim.shape)).astype(np.float32)/255
-    return gim + noise
+    noise = (np.random.normal(0, 10, size=gim.shape)).astype(np.float32)/255
+    noisy_gim = gim + noise
+    return noisy_gim
 
 def downsample(gim):
     for i in range(gim.shape[2]):
@@ -231,6 +250,12 @@ def downsample_fill(gim):
 
 def test(args, model,device,logger=None, config=None):
     print("Evaluation")
+    if args.noise=='gauss':
+        print("Adding gaussian noise to input.")
+    if args.noise=='dszero':
+        print("Adding downsampling with zero noise to input.")
+    if args.noise=='dscopy':
+        print("Adding downsampling with copy noise to input.")
     test_set = get_test_datasets(args.dataset)
     test_loader = DataLoader(dataset=test_set, batch_size=args.eval_batchsize,shuffle=False)
     storer = defaultdict(list)
@@ -244,21 +269,23 @@ def test(args, model,device,logger=None, config=None):
                         **vars(args))
     for i, data in enumerate(test_loader, 0):
         nr +=1
+        data_n = data.clone()
         if not args.noise=='none':
             if args.noise=='gauss':
-                data = addnoise(data)
+                data_n = addnoise(data_n)
             if args.noise=='dszero':
-                data = downsample(data)
+                data_n = downsample(data_n)
             if args.noise=='dscopy':
-                data = downsample_fill(data)
+                data_n = downsample_fill(data_n)
+        data_n = data_n.to(device)
         data = data.to(device)
         start_proc = timeit.default_timer()
-        recon_batch, latent_dist, latent_sample = model(data)
+        recon_batch, latent_dist, latent_sample = model(data_n)
         stop_proc=timeit.default_timer()
-        if not ( nr==1 and i == 0 ):
+        if not ( i == 0 ):
             delta_time = delta_time + (stop_proc - start_proc)
         if i==0:
-            save_reco(data,recon_batch, args.checkpoint_dir, args.image_size)
+            save_reco(data,data_n,recon_batch, args.checkpoint_dir, args.image_size)
         loss,rec_loss, kl_loss, loss_cd = loss_f(data, recon_batch, latent_dist, not model.training,
                                     storer, latent_sample=latent_sample)
         loss_cd_all = loss_cd_all + loss_cd
