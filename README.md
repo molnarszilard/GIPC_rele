@@ -46,7 +46,7 @@ For comparing the chamfer distances we defined 4 cases:
 
 -downsampling with copy (every second point/pixel is equal to the previous value)
 
-![plot](./noise.png)
+![plot](./noises.png)
 
 | Noise type  | Our | 3d-AAE |
 | ------------- | ------------- | ------------- |
