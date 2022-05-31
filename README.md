@@ -40,7 +40,7 @@ A table about the results can be seen as the following (at downsampling we copie
 | Downsampling | 13.36 | 10.24 |
 | Average time | 0.022 ms | 0.03 ms |
 
-From the table we can see, that the other method with point clouds performs slightly better as far as the reconstruction goes, however since the main reson of using a VAE architecture is generating new data, this difference could be negligible in different scenarios. Additionally our method is faster in runtime.
+From the table we can see, that the other method with point clouds performs slightly better as far as the reconstruction goes, however since the main reason of using a VAE architecture is generating new data, this difference could be negligible in different scenarios. Additionally our method is faster in runtime.
 
 ## ACKNOWLEDGEMENT
 
