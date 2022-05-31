@@ -220,7 +220,7 @@ class BetaBLoss(BaseLoss):
         #         f'(KL: {kl_loss.item(): .4f}) '
         #         f'(RL: {rec_loss.item(): .4f}) '
         #         )
-        loss = rec_loss + self.gamma * (kl_loss - C).abs() + loss_cd*10
+        loss = rec_loss + self.gamma * (kl_loss - C).abs() + loss_cd
 
         if storer is not None:
             storer['loss'].append(loss.item())
