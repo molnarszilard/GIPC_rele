@@ -10,12 +10,14 @@ from torch.utils.data import Dataset, DataLoader, random_split
 import cv2
 import open3d as o3d
 import timeit
+from collections import defaultdict
 from disvae import init_specific_model
 from disvae.models.losses import LOSSES, RECON_DIST
 from disvae.models.vae import MODELS
 from utils.datasets import DATASETS
 from utils.datasets import get_test_datasets
 from utils.helpers import set_seed, get_config_section, update_namespace_, FormatterNoDuplicate
+from disvae.models.losses import LOSSES, RECON_DIST, get_loss_f
 
 TRAIN_LOSSES_LOGFILE = "train_losses.log"
 CONFIG_FILE = "hyperparam.ini"
@@ -43,7 +45,7 @@ def parse_arguments(args_to_parse):
 
     # General options
     general = parser.add_argument_group('General options')
-    general.add_argument('name', type=str,
+    general.add_argument('--name', type=str,
                          help="Name of the model for storing and loading purposes.")
     general.add_argument('-L', '--log-level', help="Logging levels.",
                          default=default_config['log_level'], choices=LOG_LEVELS)
@@ -55,7 +57,7 @@ def parse_arguments(args_to_parse):
                          help='Disables CUDA training, even when have one.')
     general.add_argument('-s', '--seed', type=int, default=default_config['seed'],
                          help='Random seed. Can be `None` for stochastic behavior.')
-    general.add_argument('--noise', type=str, default='none'
+    general.add_argument('--noise', type=str, default='none',
                          help="Do you want to add noise to the input data? Options: none, gauss, dszero, dscopy")
 
     # Learning options
@@ -231,9 +233,15 @@ def test(args, model,device,logger=None, config=None):
     print("Evaluation")
     test_set = get_test_datasets(args.dataset)
     test_loader = DataLoader(dataset=test_set, batch_size=args.eval_batchsize,shuffle=False)
+    storer = defaultdict(list)
     nr = 0
-    start = default_timer()
+    delta_time = 0
     model.eval()
+    loss_cd_all = 0
+    loss_f = get_loss_f(args.loss,config=config,
+                        n_data=len(test_loader),
+                        device=device,
+                        **vars(args))
     for i, data in enumerate(test_loader, 0):
         nr +=1
         if not args.noise=='none':
@@ -244,14 +252,20 @@ def test(args, model,device,logger=None, config=None):
             if args.noise=='dscopy':
                 data = downsample_fill(data)
         data = data.to(device)
+        start_proc = timeit.default_timer()
         recon_batch, latent_dist, latent_sample = model(data)
+        stop_proc=timeit.default_timer()
+        if not ( nr==1 and i == 0 ):
+            delta_time = delta_time + (stop_proc - start_proc)
         if i==0:
             save_reco(data,recon_batch, args.checkpoint_dir, args.image_size)
-    delta_time = (default_timer() - start)
-    print('Finished training after {:.1f} sec.'.format(delta_time))
+        loss,rec_loss, kl_loss, loss_cd = loss_f(data, recon_batch, latent_dist, not model.training,
+                                    storer, latent_sample=latent_sample)
+        loss_cd_all = loss_cd_all + loss_cd
     print('Processed {} number of batches.'.format(nr))
     print('Time per batch is: {} sec.'.format(delta_time/nr))
     print('Time per image is: {} sec.'.format(delta_time/nr/args.eval_batchsize))
+    print('Chamfer distance loss per image: {}'.format(loss_cd_all/nr/args.eval_batchsize))
 
 def main(args):
     """Main train and evaluation function.

@@ -17,7 +17,7 @@ Or use the preconverted dataset: https://drive.google.com/drive/folders/1WSO5Eys
 
 Run  ```python main.py --name=my_model``` to train it, you can choose whatever name you prefer.
 
-To test it, run ```python testing.py --name=my_model```. 
+To test it, run ```python testing.py --name=my_model --checkpoint_dir=results/my_model/```. 
 
 Example of the generated point clouds ca be see here, where multiple image sizes were comparised
 
@@ -29,16 +29,18 @@ The conversion between depth images, point clouds and geometry images can be see
 
 ##  Comparison
 
-We compared our method to https://github.com/MaciejZamorski/3d-AAE method. Our method performs about 80% of this method concerning Chamfer Distance, but our method is approximately 1.3-1.5 times faster in generating new images.
+We compared our method to https://github.com/MaciejZamorski/3d-AAE method, which uses point clouds.
 
-A small table about the results can be seen as the following (at downsampling we copied every second value to the next position, in order to keep the size constant):
+A table about the results can be seen as the following (at downsampling we copied every second value to the next position, in order to keep the size constant). We used Chamfer Distance as the metric and the runtime (this latter one was quite constant throughout the different tests). At testing the first measured time duration tend be much higher then the rest, because of the initializing phase, so we did not take the first time into account:
 
 | Noise type  | Our | 3d-AAE |
 | ------------- | ------------- | ------------- |
 | none  | 10.89 | 8.99 |
-| Gaussian  | 10.22 | 7.2007 |
-| Downsampling | 13.3611 | 10.2439 |
+| Gaussian  | 10.22 | 7.20 |
+| Downsampling | 13.36 | 10.24 |
 | Average time | 0.022 ms | 0.03 ms |
+
+From the table we can see, that the other method with point clouds performs slightly better as far as the reconstruction goes, however since the main reson of using a VAE architecture is generating new data, this difference could be negligible in different scenarios. Additionally our method is faster in runtime.
 
 ## ACKNOWLEDGEMENT
 

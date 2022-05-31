@@ -14,12 +14,11 @@ from ray.tune.schedulers import ASHAScheduler
 import logging
 from torch import optim,nn
 import torch
-from torch.utils.data import Dataset, DataLoader, random_split
+from torch.utils.data import DataLoader, random_split
 import cv2
 import open3d as o3d
 import timeit
-from disvae import init_specific_model, Trainer, Evaluator
-from disvae.utils.modelIO import save_model, load_model, load_metadata
+from disvae import init_specific_model
 from disvae.models.losses import LOSSES, RECON_DIST, get_loss_f
 from disvae.models.vae import MODELS
 from utils.datasets import get_dataloaders, get_img_size, DATASETS, get_train_dataloaders, get_test_dataloaders
@@ -68,7 +67,7 @@ def parse_arguments(args_to_parse):
                          help='Random seed. Can be `None` for stochastic behavior.')
     general.add_argument('--ray', type=bool, default=default_config['ray'],
                          help='Do you want to tune your hyperparameters using ray tune?')
-    general.add_argument('--noise', type=str, default='none'
+    general.add_argument('--noise', type=str, default='none',
                          help="Do you want to add noise to the input data? Options: none, gauss, dszero, dscopy")
 
     # Learning options
