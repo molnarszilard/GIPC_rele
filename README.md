@@ -64,3 +64,4 @@ Concerning the runtime (the test were conducted on A100 cards from Nvidia):
 ## Acknowledgment
 
 This repo was based on the work [Disentangled VAE](https://github.com/YannDubs/disentangling-vae).
+Further support was given by: KTMA (Kárpát-medencei Tehetségkutató Alapítvány) and National Authority for Scientific Research, CNCS-UEFISCDI
