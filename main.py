@@ -20,7 +20,6 @@ import open3d as o3d
 import timeit
 from disvae import init_specific_model
 from disvae.models.losses import LOSSES, RECON_DIST, get_loss_f
-from disvae.models.vae import MODELS
 from utils.datasetloader import DatasetLoader
 from utils.helpers import (create_safe_directory, set_seed, 
                            get_config_section, update_namespace_, FormatterNoDuplicate)
@@ -97,9 +96,6 @@ def parse_arguments(args_to_parse):
 
     # Model Options
     model = parser.add_argument_group('Model specfic options')
-    model.add_argument('-m', '--model-type',
-                       default=default_config['model'], choices=MODELS,
-                       help='Type of encoder and decoder to use.')
     model.add_argument('-z', '--latent-dim', type=int,
                        default=default_config['latent_dim'],
                        help='Dimension of the latent variable.')
@@ -246,7 +242,7 @@ def train(config=None, args=None):
     #         logger.info("FactorVae needs 2 batches per iteration. To replicate this behavior while being consistent, we double the batch size and the the number of epochs.")
     #         args.batch_size *= config['batch_size']
     #         args.epochs *= 2
-    model = init_specific_model(args.model_type, args.img_size, args.latent_dim)
+    model = init_specific_model(args.img_size, args.latent_dim)
     device = "cpu"
     if torch.cuda.is_available() and not args.no_cuda:
         device = "cuda:0"
@@ -300,20 +296,23 @@ def train(config=None, args=None):
                         data = downsample_fill(data)
                 data = data.to(device)
                 try:
-                    recon_batch, latent_dist, latent_sample = model(data)
-                    loss,rec_loss, kl_loss, loss_cd = loss_f(data, recon_batch, latent_dist, model.training,
-                                    storer, latent_sample=latent_sample)
+                    recon_batch, recon_batch2, latent_dist1, latent_dist2, latent_sample1, latent_sample2 = model(data)
+                    loss1,rec_loss1, kl_loss1, loss_cd1 = loss_f(data, recon_batch, latent_dist1, model.training,
+                                    storer, latent_sample=latent_sample1)
+                    loss2,rec_loss2, kl_loss2, loss_cd2 = loss_f(latent_sample1, recon_batch2, latent_dist2, model.training,
+                                    storer, latent_sample=latent_sample2)
                     optimizer.zero_grad()
                     loss.backward()
                     optimizer.step()
 
                 except ValueError:
-                    loss,rec_loss, kl_loss, loss_cd = loss_f.call_optimize(data, model, optimizer, storer)
+                    loss1,rec_loss1, kl_loss1, loss_cd1 = loss_f.call_optimize(data, model, optimizer, storer)
+                    loss2,rec_loss2, kl_loss2, loss_cd2 = loss_f.call_optimize(data, model, optimizer, storer)
 
-                iter_loss = loss.item()
+                iter_loss = loss1.item()*2+loss2.item()
                 epoch_loss += iter_loss
 
-                t.set_postfix(loss=iter_loss,rec_loss=rec_loss.item(),kl_loss=kl_loss.item(),loss_cd=loss_cd.item())
+                t.set_postfix(loss=iter_loss,rec_loss=rec_loss1.item()*2+rec_loss2.item(),kl_loss=kl_loss1.item()*2+kl_loss2.item(),loss_cd=loss_cd1.item()*2+loss_cd2.item())
                 t.update()
 
         mean_epoch_loss = epoch_loss / len(train_loader)
@@ -457,7 +456,7 @@ def main(args):
         print("Best trial final validation cd: {}".format(
             best_trial.last_result["loss_cd"]))
 
-        best_trained_model = init_specific_model(args.model_type, args.img_size, args.latent_dim)      
+        best_trained_model = init_specific_model(args.img_size, args.latent_dim)      
         best_checkpoint_dir = best_trial.checkpoint.value
         args.checkpoint_dir = best_checkpoint_dir
         model_state = torch.load(os.path.join(
