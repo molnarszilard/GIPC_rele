@@ -21,9 +21,8 @@ import timeit
 from disvae import init_specific_model
 from disvae.models.losses import LOSSES, RECON_DIST, get_loss_f
 from disvae.models.vae import MODELS
-from utils.datasets import get_dataloaders, get_img_size, DATASETS, get_train_dataloaders, get_test_dataloaders
-from utils.datasets import get_train_datasets, get_test_datasets, get_datasets
-from utils.helpers import (create_safe_directory, get_device, set_seed, get_n_param,
+from utils.datasetloader import DatasetLoader
+from utils.helpers import (create_safe_directory, set_seed, 
                            get_config_section, update_namespace_, FormatterNoDuplicate)
 from utils.visualize import GifTraversalsTraining
 
@@ -32,10 +31,14 @@ CONFIG_FILE = "hyperparam.ini"
 RES_DIR = "results"
 LOG_LEVELS = list(logging._levelToName.values())
 ADDITIONAL_EXP = ['custom', "debug", "best_celeba"]
-EXPERIMENTS = ADDITIONAL_EXP + ["{}_{}".format(loss, data)
-                                for loss in LOSSES
-                                for data in DATASETS]
 
+def get_train_datasets(dataset,batch_size=128):
+    train_set = DatasetLoader(root=dataset,train=True)
+    return train_set
+
+def get_test_datasets(dataset,batch_size=10):
+    test_set = DatasetLoader(root=dataset,train=False)
+    return test_set
 
 def parse_arguments(args_to_parse):
     """Parse the command line arguments.
@@ -77,9 +80,6 @@ def parse_arguments(args_to_parse):
                           help='Save a checkpoint of the trained model every n epoch.')
     training.add_argument('-d', '--dataset', help="Path to training data.",
                           default=default_config['dataset'])
-    training.add_argument('-x', '--experiment',
-                          default=default_config['experiment'], choices=EXPERIMENTS,
-                          help='Predefined experiments to run. If not `custom` this will overwrite some other arguments.')
     training.add_argument('-e', '--epochs', type=int,
                           default=default_config['epochs'],
                           help='Maximum number of epochs to run for.')
@@ -165,21 +165,21 @@ def parse_arguments(args_to_parse):
                             help='Batch size for evaluation.')
 
     args = parser.parse_args(args_to_parse)
-    if args.experiment != 'custom':
-        if args.experiment not in ADDITIONAL_EXP:
-            # update all common sections first
-            model, dataset = args.experiment.split("_")
-            common_data = get_config_section([CONFIG_FILE], "Common_{}".format(dataset))
-            update_namespace_(args, common_data)
-            common_model = get_config_section([CONFIG_FILE], "Common_{}".format(model))
-            update_namespace_(args, common_model)
+    # if args.experiment != 'custom':
+    #     if args.experiment not in ADDITIONAL_EXP:
+    #         # update all common sections first
+    #         model, dataset = args.experiment.split("_")
+    #         common_data = get_config_section([CONFIG_FILE], "Common_{}".format(dataset))
+    #         update_namespace_(args, common_data)
+    #         common_model = get_config_section([CONFIG_FILE], "Common_{}".format(model))
+    #         update_namespace_(args, common_model)
 
-        try:
-            experiments_config = get_config_section([CONFIG_FILE], args.experiment)
-            update_namespace_(args, experiments_config)
-        except KeyError as e:
-            if args.experiment in ADDITIONAL_EXP:
-                raise e  # only reraise if didn't use common section
+    #     try:
+    #         experiments_config = get_config_section([CONFIG_FILE], args.experiment)
+    #         update_namespace_(args, experiments_config)
+    #     except KeyError as e:
+    #         if args.experiment in ADDITIONAL_EXP:
+    #             raise e  # only reraise if didn't use common section
 
     return args
 

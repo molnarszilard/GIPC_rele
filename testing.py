@@ -6,7 +6,7 @@ from timeit import default_timer
 import numpy as np
 import logging
 import torch
-from torch.utils.data import Dataset, DataLoader, random_split
+from torch.utils.data import DataLoader
 import cv2
 import open3d as o3d
 import timeit
@@ -14,20 +14,17 @@ from collections import defaultdict
 from disvae import init_specific_model
 from disvae.models.losses import LOSSES, RECON_DIST
 from disvae.models.vae import MODELS
-from utils.datasets import DATASETS
-from utils.datasets import get_test_datasets
+from utils.datasetloader import DatasetLoader
 from utils.helpers import set_seed, get_config_section, update_namespace_, FormatterNoDuplicate
 from disvae.models.losses import LOSSES, RECON_DIST, get_loss_f
 
-TRAIN_LOSSES_LOGFILE = "train_losses.log"
 CONFIG_FILE = "hyperparam.ini"
 RES_DIR = "results"
 LOG_LEVELS = list(logging._levelToName.values())
-ADDITIONAL_EXP = ['custom', "debug", "best_celeba"]
-EXPERIMENTS = ADDITIONAL_EXP + ["{}_{}".format(loss, data)
-                                for loss in LOSSES
-                                for data in DATASETS]
 
+def get_test_datasets(dataset,batch_size=10):
+    test_set = DatasetLoader(root=dataset,train=False)
+    return test_set
 
 def parse_arguments(args_to_parse):
     """Parse the command line arguments.
@@ -67,9 +64,6 @@ def parse_arguments(args_to_parse):
                           help='Save a checkpoint of the trained model every n epoch.')
     training.add_argument('-d', '--dataset', help="Path to training data.",
                           default=default_config['dataset'])
-    training.add_argument('-x', '--experiment',
-                          default=default_config['experiment'], choices=EXPERIMENTS,
-                          help='Predefined experiments to run. If not `custom` this will overwrite some other arguments.')
     training.add_argument('-e', '--epochs', type=int,
                           default=default_config['epochs'],
                           help='Maximum number of epochs to run for.')
@@ -155,22 +149,6 @@ def parse_arguments(args_to_parse):
                             help='Batch size for evaluation.')
 
     args = parser.parse_args(args_to_parse)
-    if args.experiment != 'custom':
-        if args.experiment not in ADDITIONAL_EXP:
-            # update all common sections first
-            model, dataset = args.experiment.split("_")
-            common_data = get_config_section([CONFIG_FILE], "Common_{}".format(dataset))
-            update_namespace_(args, common_data)
-            common_model = get_config_section([CONFIG_FILE], "Common_{}".format(model))
-            update_namespace_(args, common_model)
-
-        try:
-            experiments_config = get_config_section([CONFIG_FILE], args.experiment)
-            update_namespace_(args, experiments_config)
-        except KeyError as e:
-            if args.experiment in ADDITIONAL_EXP:
-                raise e  # only reraise if didn't use common section
-
     return args
 
 def save_reco(data,data_n,images, directory, height):
@@ -227,7 +205,7 @@ def save_reco(data,data_n,images, directory, height):
         o3d.io.write_point_cloud(path,pcd)
 
 def addnoise(gim):
-    noise = (np.random.normal(0, 10, size=gim.shape)).astype(np.float32)/255
+    noise = (np.random.normal(0, 12.8, size=gim.shape)).astype(np.float32)/255
     noisy_gim = gim + noise
     return noisy_gim
 

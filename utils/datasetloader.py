@@ -6,7 +6,7 @@ import cv2
 import os
 class DatasetLoader(data.Dataset):
     
-    def __init__(self, root='./data/ModelNet10_gim_64/', seed=None, train=True):
+    def __init__(self, root='./data/ModelNet10_gim_32/', seed=None, train=True):
         np.random.seed(seed)
         self.root = Path(root)
 
