@@ -6,23 +6,28 @@ from torch import nn, optim
 from torch.nn import functional as F
 
 from disvae.utils.initialization import weights_init
-from .encoders import get_encoder_hl
-from .encoders import get_encoder_ll
-from .decoders import get_decoder_hl
-from .decoders import get_decoder_ll
+from .encoders import get_encoder
+from .decoders import get_decoder
 
-def init_specific_model(img_size, latent_dim):
-    """Return an instance of a VAE with encoder and decoder."""
-    encoder_hl = get_encoder_hl()
-    encoder_ll = get_encoder_ll()
-    decoder_hl = get_decoder_hl()
-    decoder_ll = get_decoder_ll()
-    model = VAE(img_size, encoder_hl, encoder_ll, decoder_hl, decoder_ll, latent_dim)
+MODELS = ["Burgess"]
+
+
+def init_specific_model(model_type, img_size, latent_dim):
+    """Return an instance of a VAE with encoder and decoder from `model_type`."""
+    model_type = model_type.lower().capitalize()
+    if model_type not in MODELS:
+        err = "Unkown model_type={}. Possible values: {}"
+        raise ValueError(err.format(model_type, MODELS))
+
+    encoder = get_encoder(model_type)
+    decoder = get_decoder(model_type)
+    model = VAE(img_size, encoder, decoder, latent_dim)
+    model.model_type = model_type  # store to help reloading
     return model
 
 
 class VAE(nn.Module):
-    def __init__(self, img_size, encoder_hl, encoder_ll, decoder_hl, decoder_ll, latent_dim):
+    def __init__(self, img_size, encoder, decoder, latent_dim):
         """
         Class which defines model and forward pass.
 
@@ -40,10 +45,8 @@ class VAE(nn.Module):
         self.latent_dim = latent_dim
         self.img_size = img_size
         self.num_pixels = self.img_size[1] * self.img_size[2]
-        self.encoder_hl = encoder_hl(img_size, self.latent_dim*10)
-        self.decoder_hl = decoder_hl(img_size, self.latent_dim*10)
-        self.encoder_ll = encoder_ll(img_size, self.latent_dim)
-        self.decoder_ll = decoder_ll(img_size, self.latent_dim)
+        self.encoder = encoder(img_size, self.latent_dim)
+        self.decoder = decoder(img_size, self.latent_dim)
 
         self.reset_parameters()
 
@@ -77,27 +80,10 @@ class VAE(nn.Module):
         x : torch.Tensor
             Batch of data. Shape (batch_size, n_chan, height, width)
         """
-        print("data:")
-        print(x.shape)
-        latent_dist1 = self.encoder_hl(x)
-        print("ld1:")
-        print(latent_dist1)
-        latent_sample1 = self.reparameterize(*latent_dist1)
-        print("ls1:")
-        print(latent_sample1.shape)
-        latent_dist2 = self.encoder_ll(latent_sample1)
-        print("ld2:")
-        print(latent_dist2)
-        latent_sample2 = self.reparameterize(*latent_dist2)
-        print("ls2:")
-        print(latent_sample2.shape)
-        reconstruct2 = self.decoder_ll(latent_sample2)
-        print("reco2:")
-        print(reconstruct2.shape)
-        reconstruct1 = self.decoder_hl(latent_sample1+reconstruct2)
-        print("reco1:")
-        print(reconstruct1.shape)
-        return reconstruct1, reconstruct2, latent_dist1, latent_dist2, latent_sample1,  latent_sample2
+        latent_dist = self.encoder(x)
+        latent_sample = self.reparameterize(*latent_dist)
+        reconstruct = self.decoder(latent_sample)
+        return reconstruct, latent_dist, latent_sample
 
     def reset_parameters(self):
         self.apply(weights_init)
