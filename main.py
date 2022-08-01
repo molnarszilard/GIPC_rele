@@ -2,7 +2,6 @@ import argparse
 import logging
 import sys
 import os
-from configparser import ConfigParser
 from timeit import default_timer
 from tqdm import trange
 from collections import defaultdict
@@ -12,19 +11,16 @@ from ray import tune
 from ray.tune import CLIReporter
 from ray.tune.schedulers import ASHAScheduler
 import logging
-from torch import optim,nn
+from torch import optim
 import torch
 from torch.utils.data import DataLoader, random_split
 import cv2
 import open3d as o3d
-import timeit
-from disvae import init_specific_model
 from disvae.models.losses import LOSSES, RECON_DIST, get_loss_f
-from disvae.models.vae import MODELS
+from disvae.models.vae import MODELS, init_specific_model
 from utils.datasetloader import DatasetLoader
 from utils.helpers import (create_safe_directory, set_seed, 
-                           get_config_section, update_namespace_, FormatterNoDuplicate)
-from utils.visualize import GifTraversalsTraining
+                           get_config_section, FormatterNoDuplicate)
 
 TRAIN_LOSSES_LOGFILE = "train_losses.log"
 CONFIG_FILE = "hyperparam.ini"
@@ -165,22 +161,6 @@ def parse_arguments(args_to_parse):
                             help='Batch size for evaluation.')
 
     args = parser.parse_args(args_to_parse)
-    # if args.experiment != 'custom':
-    #     if args.experiment not in ADDITIONAL_EXP:
-    #         # update all common sections first
-    #         model, dataset = args.experiment.split("_")
-    #         common_data = get_config_section([CONFIG_FILE], "Common_{}".format(dataset))
-    #         update_namespace_(args, common_data)
-    #         common_model = get_config_section([CONFIG_FILE], "Common_{}".format(model))
-    #         update_namespace_(args, common_model)
-
-    #     try:
-    #         experiments_config = get_config_section([CONFIG_FILE], args.experiment)
-    #         update_namespace_(args, experiments_config)
-    #     except KeyError as e:
-    #         if args.experiment in ADDITIONAL_EXP:
-    #             raise e  # only reraise if didn't use common section
-
     return args
 
 def save_reco(data,images, directory, height):
@@ -242,10 +222,6 @@ def downsample_fill(gim):
     return gim
 
 def train(config=None, args=None):
-    # if args.loss == "factor":
-    #         logger.info("FactorVae needs 2 batches per iteration. To replicate this behavior while being consistent, we double the batch size and the the number of epochs.")
-    #         args.batch_size *= config['batch_size']
-    #         args.epochs *= 2
     model = init_specific_model(args.model_type, args.img_size, args.latent_dim)
     device = "cpu"
     if torch.cuda.is_available() and not args.no_cuda:

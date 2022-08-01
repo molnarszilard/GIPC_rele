@@ -12,7 +12,6 @@ def get_decoder(model_type):
     model_type = model_type.lower().capitalize()
     return eval("Decoder{}".format(model_type))
 
-
 class DecoderBurgess(nn.Module):
     def __init__(self, img_size,
                  latent_dim=10):

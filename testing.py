@@ -11,11 +11,10 @@ import cv2
 import open3d as o3d
 import timeit
 from collections import defaultdict
-from disvae import init_specific_model
+from disvae.models.vae import MODELS, init_specific_model
 from disvae.models.losses import LOSSES, RECON_DIST
-from disvae.models.vae import MODELS
 from utils.datasetloader import DatasetLoader
-from utils.helpers import set_seed, get_config_section, update_namespace_, FormatterNoDuplicate
+from utils.helpers import set_seed, get_config_section, FormatterNoDuplicate
 from disvae.models.losses import LOSSES, RECON_DIST, get_loss_f
 
 CONFIG_FILE = "hyperparam.ini"

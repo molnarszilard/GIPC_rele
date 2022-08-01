@@ -50,16 +50,17 @@ For comparing the chamfer distances we defined 4 cases:
 
 | Noise type  | Our | 3d-AAE |
 | ------------- | ------------- | ------------- |
-| without noise  | 5.05 | 3.30 |
-| gaussian  | 5.06 | 10.28 |
-| downsampling with zero | 6.61 | 3.50 |
-| downsampling with copy | 5.66 | 3.41 |
+| Without noise | 9.6 | 3.8 |
+| Gaussian noise (~5cm) | 9.7 | 11.5 |
+| Gaussian noise (~7.5cm) | 9.8 | 22.2 |
+| Gaussian noise (~10cm) | 10 | 37.38 |
 
-Concerning the runtime (the test were conducted on A100 cards from Nvidia):
+Concerning the runtime (the test were conducted on A100 cards from Nvidia, and on a Jetson NX):
 
 | -  | Our | 3d-AAE |
 | ------------- | ------------- | ------------- |
-| Average time | 1 ms | 2.5 ms |
+| Time (on server) | 0.9 ms | 1.3 ms |
+| Time (on Jetson NX) | 5.4 | 12.5 |
 
 ## Acknowledgment
 
