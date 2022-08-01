@@ -10,7 +10,7 @@ from torch.nn import functional as F
 from torch import optim
 
 from .discriminator import Discriminator
-from disvae.utils.math import (log_density_gaussian, log_importance_weight_matrix,
+from utils.math import (log_density_gaussian, log_importance_weight_matrix,
                                matrix_log_density_gaussian)
 
 

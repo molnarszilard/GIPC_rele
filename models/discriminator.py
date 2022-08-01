@@ -3,7 +3,7 @@ Module containing discriminator for FactorVAE.
 """
 from torch import nn
 
-from disvae.utils.initialization import weights_init
+from utils.initialization import weights_init
 
 
 class Discriminator(nn.Module):

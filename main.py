@@ -16,8 +16,8 @@ import torch
 from torch.utils.data import DataLoader, random_split
 import cv2
 import open3d as o3d
-from disvae.models.losses import LOSSES, RECON_DIST, get_loss_f
-from disvae.models.vae import MODELS, init_specific_model
+from models.losses import LOSSES, RECON_DIST, get_loss_f
+from models.vae import MODELS, init_specific_model
 from utils.datasetloader import DatasetLoader
 from utils.helpers import (create_safe_directory, set_seed, 
                            get_config_section, FormatterNoDuplicate)
