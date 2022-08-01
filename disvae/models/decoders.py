@@ -14,7 +14,6 @@ def get_decoder_hl():
 def get_decoder_ll():
     return eval("DecoderLow")
 
-
 class DecoderHigh(nn.Module):
     def __init__(self, img_size,
                  latent_dim=10):
