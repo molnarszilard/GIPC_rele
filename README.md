@@ -62,6 +62,30 @@ Concerning the runtime (the test were conducted on A100 cards from Nvidia, and o
 | Time (on server) | 0.9 ms | 1.3 ms |
 | Time (on Jetson NX) | 5.4 | 12.5 |
 
+## Citations
+### Citing this work
+If you find our code / paper / data useful to your research, please consider citing:
+
+```bibtex
+@inproceedings{DBLP:conf/eccv/MolnarT22,
+  author       = {Szil{\'{a}}rd Moln{\'{a}}r and
+                  Levente Tam{\'{a}}s},
+  editor       = {Leonid Karlinsky and
+                  Tomer Michaeli and
+                  Ko Nishino},
+  title        = {Representation Learning for Point Clouds with Variational Autoencoders},
+  booktitle    = {Computer Vision - {ECCV} 2022 Workshops - Tel Aviv, Israel, October
+                  23-27, 2022, Proceedings, Part {VI}},
+  series       = {Lecture Notes in Computer Science},
+  volume       = {13806},
+  pages        = {727--737},
+  publisher    = {Springer},
+  year         = {2022},
+  url          = {https://doi.org/10.1007/978-3-031-25075-0\_49},
+  doi          = {10.1007/978-3-031-25075-0\_49},
+}
+```
+
 ## Acknowledgment
 
 This repo was based on the work [Disentangled VAE](https://github.com/YannDubs/disentangling-vae).
