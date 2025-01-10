@@ -1,5 +1,7 @@
 # Representation Learning for point clouds using geometry images
 
+This work was published at [ECCV2022](https://www.researchgate.net/publication/354758865_Feature_Pyramid_Network_Based_Efficient_Normal_Estimation_and_Filtering_for_Time-of-Flight_Depth_Cameras).
+
 This repo contains the code for training the VAE based geometry image generator method, including hyperparameter tuning with [RayTune](https://pytorch.org/tutorials/beginner/hyperparameter_tuning_tutorial.html).
 
 Inside the folder create 'data' and 'results' folders.
@@ -67,22 +69,17 @@ Concerning the runtime (the test were conducted on A100 cards from Nvidia, and o
 If you find our code / paper / data useful to your research, please consider citing:
 
 ```bibtex
-@inproceedings{DBLP:conf/eccv/MolnarT22,
-  author       = {Szil{\'{a}}rd Moln{\'{a}}r and
-                  Levente Tam{\'{a}}s},
-  editor       = {Leonid Karlinsky and
-                  Tomer Michaeli and
-                  Ko Nishino},
-  title        = {Representation Learning for Point Clouds with Variational Autoencoders},
-  booktitle    = {Computer Vision - {ECCV} 2022 Workshops - Tel Aviv, Israel, October
-                  23-27, 2022, Proceedings, Part {VI}},
-  series       = {Lecture Notes in Computer Science},
-  volume       = {13806},
-  pages        = {727--737},
-  publisher    = {Springer},
-  year         = {2022},
-  url          = {https://doi.org/10.1007/978-3-031-25075-0\_49},
-  doi          = {10.1007/978-3-031-25075-0\_49},
+@InProceedings{molnar2023representationlearningpcd,
+  author    = {Szil{\'{a}}rd Moln{\'{a}}r and Levente Tam{\'{a}}s},
+  booktitle = {{Computer Vision - {ECCV} 2022 Workshops - Tel Aviv, Israel, October 23-27, 2022, Proceedings, Part {VI}}},
+  title     = {{Representation Learning for Point Clouds with Variational Autoencoders}},
+  year      = {2022},
+  editor    = {Leonid Karlinsky and Tomer Michaeli and Ko Nishino},
+  pages     = {727--737},
+  publisher = {Springer},
+  series    = {Lecture Notes in Computer Science},
+  volume    = {13806},
+  doi       = {10.1007/978-3-031-25075-0\_49},
 }
 ```
 
